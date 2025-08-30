@@ -473,10 +473,10 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
             var canvas = document.createElement("canvas");
             cachedDataUrl = canvas.toDataURL();
             // inset.src = cachedDataUrl; remove artefact icon
-			// if (vscode.workspace.getConfiguration().get("show_small_window")) {
-            // 	insets.push(inset);
-			// }
-			insets.push(inset);
+			if (window.extensionConfig.show_small_window) {
+            	insets.push(inset);
+			}
+			// insets.push(inset);
 
             content.addEventListener("mousemove", function(content, insets, event) {
                 this.mouseMoveHandler(event, content, insets);

@@ -123,11 +123,19 @@ export class ImageViewer {
             });
         });
 
+		const config = vscode.workspace.getConfiguration('cmp');
+  		const show_small_window = config.get<boolean>('show_small_window', false);
+
         // Use a nonce to only allow specific scripts to be run
         const nonce = getNonce();
         return `<!DOCTYPE html>
 			<html lang="en">
 			<head>
+				<script>
+					window.extensionConfig = {
+						enableFeature: ${show_small_window}
+					};
+				</script>
 				<meta charset="UTF-8">
 
 				<!--
