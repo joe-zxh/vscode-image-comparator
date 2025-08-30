@@ -25,6 +25,8 @@
     and can be found at http://www.jacklmoore.com/wheelzoom.
 */
 
+// import * as vscode from "vscode";
+// const vscode = require("vscode");
 
 var imageBoxSettings = {
     zoom: 0.1
@@ -285,7 +287,7 @@ var ImageBox = function(parent, config) {
     var help = document.createElement('p');
     help.appendChild(document.createTextNode("Use mouse wheel to zoom in/out, click and drag to pan. Press keys [1], [2], ... to switch between individual images."));
     help.className = "help";
-    box.appendChild(help);
+    // box.appendChild(help);
 
     self.viewerContainer = document.createElement('div');
     self.viewerContainer.className="image-viewer";
@@ -294,10 +296,14 @@ var ImageBox = function(parent, config) {
     var plotContainer = document.createElement('div');
     plotContainer.className = "plot-container";
     box.appendChild(plotContainer);
+
+	this.imageNodes = []; // 存储所有图像节点
     
     this.tree = [];
     this.selection = [];
     this.buildTreeNode(config, 0, this.tree, self.viewerContainer);
+
+	this.loadImageResolutions();
 
     for (var i = 0; i < this.selection.length; ++i) {
         this.selection[i] = 0;
@@ -320,6 +326,36 @@ var ImageBox = function(parent, config) {
         element.addEventListener('dragend', handleDragEnd, false);
     });
 }
+
+ImageBox.prototype.loadImageResolutions = function() {
+    var self = this;
+    // 遍历所有图像节点
+    this.imageNodes.forEach(function(node) {
+        var config = node.config;
+        // 如果已经是叶子节点（图像）
+        if (!node.children || node.children.length === 0) {
+            var img = new Image();
+			img.crossOrigin = "Anonymous";
+            img.onload = function() {
+                config.resolution = `${this.naturalWidth} × ${this.naturalHeight}`;
+                self.updateResolutionDisplay(node);
+            };
+            img.onerror = function() {
+                config.resolution = "获取失败";
+                self.updateResolutionDisplay(node);
+            };
+            img.src = config.image;
+        }
+    });
+};
+
+// 更新分辨率显示
+ImageBox.prototype.updateResolutionDisplay = function(node) {
+    var resolutionSpan = node.selector.querySelector('.resolution');
+    if (resolutionSpan) {
+        resolutionSpan.textContent = node.config.resolution;
+    }
+};
 
 
 ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
@@ -400,7 +436,22 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
 			// 添加到容器
 			titleContainer.appendChild(folderSpan);
 			titleContainer.appendChild(fileSpan);
-			selector.appendChild(titleContainer);
+			selector.appendChild(titleContainer);			
+
+			// 添加分辨率显示元素
+            var resolutionSpan = document.createElement('span');
+            resolutionSpan.className = 'resolution';
+            resolutionSpan.textContent = config[i].resolution || "加载中...";
+            resolutionSpan.style.fontSize = '0.8em';
+            resolutionSpan.style.color = '#888';
+            
+            // 将分辨率添加到标题容器
+            titleContainer.appendChild(resolutionSpan);
+
+			contentNode.config = config[i];
+            
+            // 保存图像节点引用
+            this.imageNodes.push(contentNode);
 
 			// 设置提示还是完整路径
 			selector.title = config[i].fullPath;
@@ -422,7 +473,10 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
             var canvas = document.createElement("canvas");
             cachedDataUrl = canvas.toDataURL();
             // inset.src = cachedDataUrl; remove artefact icon
-            insets.push(inset);
+			// if (vscode.workspace.getConfiguration().get("show_small_window")) {
+            // 	insets.push(inset);
+			// }
+			insets.push(inset);
 
             content.addEventListener("mousemove", function(content, insets, event) {
                 this.mouseMoveHandler(event, content, insets);

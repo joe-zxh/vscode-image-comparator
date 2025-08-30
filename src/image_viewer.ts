@@ -108,7 +108,7 @@ export class ImageViewer {
         const imageBoxObj = [
             {
                 "elements" : new Array<any>,
-                "title" : "Image Comparator",
+                "title" : "Image Comparator: Use mouse wheel to zoom in/out, click and drag to pan. Press keys [1], [2], ... to switch between individual images.",
                 "frame_number" : 0,
             }
         ];
@@ -116,9 +116,9 @@ export class ImageViewer {
         // Populate with user selected images
         this._imageList.forEach( (image) => {
             imageBoxObj[0]["elements"].push({
-                    "version": "-",
-                    "title": path.parse(image).base,
-            		"fullPath": image, // 添加完整路径属性
+				"version": "-",
+				"title": path.parse(image).base,
+				"fullPath": image, // 添加完整路径属性
                     "image": webview.asWebviewUri(vscode.Uri.file(image)).toString(),
             });
         });

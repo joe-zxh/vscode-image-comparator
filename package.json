@@ -39,7 +39,18 @@
 					"group": "3_compare"
 				}
 			]
+		},
+		"configuration": {
+			"title": "Image Comparator v2",
+			"properties": {
+				"show_small_window": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show small window"
+				}
+			}
 		}
+		
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
