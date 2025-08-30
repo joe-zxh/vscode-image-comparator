@@ -45,7 +45,7 @@
 			"properties": {
 				"cmp.show_small_window": {
 					"type": "boolean",
-					"default": false,
+					"default": true,
 					"description": "Show small window"
 				}
 			}
