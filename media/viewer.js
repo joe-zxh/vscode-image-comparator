@@ -375,12 +375,36 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
             else if (i == 10)
                 key = "R: ";
 
-            // selector.appendChild(document.createTextNode(key+config[i].title));
-			// 创建包含标题的 span 元素
-			var titleSpan = document.createElement('span');
-			titleSpan.textContent = key + config[i].title;
-			titleSpan.title = config[i].fullPath; // 设置完整路径作为提示
-			selector.appendChild(titleSpan);
+			// 创建包含标题的容器
+			var titleContainer = document.createElement('div');
+			titleContainer.style.display = 'flex';
+			titleContainer.style.flexDirection = 'column';
+
+			// 从完整路径中提取文件夹名和文件名
+			var pathParts = config[i].fullPath.split(/[\\/]/);
+			var folderName = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
+			var fileName = pathParts[pathParts.length - 1];
+
+			// 创建文件夹名元素（小字号）
+			var folderSpan = document.createElement('span');
+			folderSpan.textContent = folderName;
+			folderSpan.style.fontSize = '0.8em'; // 小一点的字号
+			folderSpan.style.color = '#888'; // 灰色字体
+			folderSpan.style.overflow = 'hidden';
+			folderSpan.style.textOverflow = 'ellipsis';
+			folderSpan.style.whiteSpace = 'nowrap';
+
+			// 创建文件名元素
+			var fileSpan = document.createElement('span');
+			fileSpan.textContent = key + fileName;
+
+			// 添加到容器
+			titleContainer.appendChild(folderSpan);
+			titleContainer.appendChild(fileSpan);
+			selector.appendChild(titleContainer);
+
+			// 设置提示还是完整路径
+			selector.title = config[i].fullPath;
 
             this.selection.length = Math.max(this.selection.length, level+1);
 
@@ -535,11 +559,12 @@ ImageBox.prototype.refreshSelectorGroup = function(selectorGroup) {
         else if (j == 10) newKey = "R: ";
         else newKey = "";
         
-        var span = selectors[j].querySelector('span');
-        if (span) {
-            var originalTitle = span.textContent.replace(/^[0-9R]: /, "");
-            span.textContent = newKey + originalTitle;
-        }
+        // 获取文件名元素（容器中的第二个span）
+		var fileSpan = selectors[j].querySelector('div > span:nth-child(2)');
+		if (fileSpan) {
+			var originalTitle = fileSpan.textContent.replace(/^[0-9R]: /, "");
+			fileSpan.textContent = newKey + originalTitle;
+		}
         
         // 移除旧的点击事件监听器
         var newClickHandler = selectors[j].onclick;
