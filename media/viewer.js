@@ -306,8 +306,6 @@ var ImageBox = function(parent, config) {
     this.showContent(0, 0);
     parent.appendChild(box);
 
-	window.imageBoxInstance = this; // 保存实例引用以便全局访问
-
     document.addEventListener("keypress", function(event) { self.keyPressHandler(event); });
 
     // Draggable UI
@@ -330,9 +328,6 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
     var selectorGroup = document.createElement('div');
     selectorGroup.className = "image-viewer-selector-group";
 
-	selectorGroup.setAttribute('data-level', level); // 标记层级
-    selectorGroup._nodeList = nodeList; // 存储节点列表引用
-
     parent.appendChild(selectorGroup);
 
     var insets = [];
@@ -341,6 +336,10 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
         // Create tab
         var selector = document.createElement('div');
         selector.className = "image-viewer-selector image-viewer-selector-primary";
+
+        selector.addEventListener("click", function(l, idx, event) {
+            this.showContent(l, idx);
+        }.bind(this, level, i));
 
         // Add to tabs
         selectorGroup.appendChild(selector);
@@ -455,8 +454,6 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
         }
         parent.appendChild(insetGroup);
     }
-	// 初始化点击事件
-	this.refreshSelectorGroup(selectorGroup);
 }
 
 
@@ -545,47 +542,6 @@ ImageBox.prototype.mouseMoveHandler = function(event, image, insets) {
     }
 }
 
-ImageBox.prototype.refreshSelectorGroup = function(selectorGroup) {
-    var self = this;
-    var selectors = selectorGroup.querySelectorAll('.image-viewer-selector');
-    var level = parseInt(selectorGroup.getAttribute('data-level'));
-    var nodeList = selectorGroup._nodeList;
-    
-    for (var j = 0; j < selectors.length; j++) {
-        // 更新快捷键显示
-        var newKey = '';
-        if (j < 9) newKey = (j+1) + ": ";
-        else if (j == 9) newKey = "0: ";
-        else if (j == 10) newKey = "R: ";
-        else newKey = "";
-        
-        // 获取文件名元素（容器中的第二个span）
-		var fileSpan = selectors[j].querySelector('div > span:nth-child(2)');
-		if (fileSpan) {
-			var originalTitle = fileSpan.textContent.replace(/^[0-9R]: /, "");
-			fileSpan.textContent = newKey + originalTitle;
-		}
-        
-        // 移除旧的点击事件监听器
-        var newClickHandler = selectors[j].onclick;
-        if (newClickHandler) {
-            selectors[j].removeEventListener('click', newClickHandler);
-        }
-        
-        // 添加新的点击事件处理器
-        (function(index) {
-            selectors[j].addEventListener('click', function(event) {
-                self.showContent(level, index);
-            });
-        })(j);
-        
-        // 更新节点列表中的选择器引用
-        if (nodeList && nodeList[j]) {
-            nodeList[j].selector = selectors[j];
-        }
-    }
-};
-
 
 function handleDragStart(event) {
     localStorage.setItem('currentDragElement', event.target.id);
@@ -614,80 +570,27 @@ function handleDrop(event) {
     event.stopPropagation();
     event.preventDefault();
 
-    var currentDragElementId = localStorage.getItem('currentDragElement');
-    if (!currentDragElementId) return;
-
-    var dragEl = document.getElementById(currentDragElementId);
-    var dropEl = event.target;
-
-    // 确保 dropEl 是选择器元素
-    while (dropEl && !dropEl.classList.contains('image-viewer-selector')) {
-        dropEl = dropEl.parentNode;
-    }
-    if (!dropEl) return;
-
-    // 相同元素不处理
-    if (dragEl === dropEl) return;
-
-    var selectorGroup = dragEl.parentNode;
-    if (selectorGroup !== dropEl.parentNode) return;
-
-    var childEls = Array.prototype.slice.call(selectorGroup.children);
-    var dragIndex = childEls.indexOf(dragEl);
-    var dropIndex = childEls.indexOf(dropEl);
-    if (dragIndex === -1 || dropIndex === -1) return;
-
-    // 交换 DOM 位置
-    if (dragIndex < dropIndex) {
-        selectorGroup.insertBefore(dragEl, dropEl.nextSibling);
-    } else {
-        selectorGroup.insertBefore(dragEl, dropEl);
+    if(localStorage.getItem('currentDragElement') == event.target.id) {
+        return;
     }
 
-    // 交换节点数据
-    var nodeList = selectorGroup._nodeList;
-    if (nodeList && nodeList.length > Math.max(dragIndex, dropIndex)) {
-        var tempNode = nodeList[dragIndex];
-        nodeList[dragIndex] = nodeList[dropIndex];
-        nodeList[dropIndex] = tempNode;
+    currentDragElement = localStorage.getItem('currentDragElement');
 
-        // 更新选中状态
-        var level = parseInt(selectorGroup.getAttribute('data-level'));
-        var imageBox = window.imageBoxInstance;
-        var currentSelection = imageBox.selection[level];
-        
-        if (currentSelection === dragIndex) {
-            imageBox.selection[level] = dropIndex;
-        } else if (currentSelection === dropIndex) {
-            imageBox.selection[level] = dragIndex;
-        }
+    var active_container = document.getElementsByClassName("image-viewer-selector image-viewer-selector-primary active");
+    var comp_idx = parseInt(active_container[0].id.split(":")[1]) - 1;
+    var to_swap = currentDragElement.split("_")[1];
+    var swapee = event.target.id.split("_")[1];
 
-        // 交换内容节点
-        var parentEl = selectorGroup.parentNode;
-        var groupIndex = Array.prototype.indexOf.call(parentEl.children, selectorGroup);
-        var dragContentIndex = groupIndex + 1 + dragIndex;
-        var dropContentIndex = groupIndex + 1 + dropIndex;
+    // Swap ImageBoxes
+    var tmp = imageBoxes[comp_idx].elements[swapee];
+    imageBoxes[comp_idx].elements[swapee] = imageBoxes[comp_idx].elements[to_swap];
+    imageBoxes[comp_idx].elements[to_swap] = tmp;
 
-        var dragContent = parentEl.children[dragContentIndex];
-        var dropContent = parentEl.children[dropContentIndex];
-
-        // 保存下一个兄弟节点用于插入
-        var nextSibling = dropContent.nextSibling;
-        parentEl.insertBefore(dragContent, dropContent);
-        if (nextSibling) {
-            parentEl.insertBefore(dropContent, nextSibling);
-        } else {
-            parentEl.appendChild(dropContent);
-        }
-
-        // 刷新显示
-		imageBox.showContent(level, imageBox.selection[level]);
-
-		// 更新选择器组：快捷键和点击事件
-		imageBox.refreshSelectorGroup(selectorGroup);
-    }
+    store_var("image_boxes", imageBoxes);
+    display_boxes();
 
     localStorage.setItem('currentDragElement', null);
+
     return false;
 }
 
