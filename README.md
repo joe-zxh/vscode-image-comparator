@@ -6,7 +6,9 @@ fork from: https://github.com/l-oneil/vscode-image-comparator
 ## New Features since fork
 - Support uppercase extension: PNG, JPG, JPEG
 - show full path when hovering on the title
-- Switch image position by dragging the title
+- show dirname on subtitle
+- ~~Switch image position by dragging the title~~
+	- remove this feature, since there are many bugs...
 
 ## Usage
 `cmd + shift + p` -> `Image Comparator: Open Window`, opens a new comparison window.
