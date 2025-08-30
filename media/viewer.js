@@ -374,7 +374,13 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
             else if (i == 10)
                 key = "R: ";
 
-            selector.appendChild(document.createTextNode(key+config[i].title));
+            // selector.appendChild(document.createTextNode(key+config[i].title));
+			// 创建包含标题的 span 元素
+			var titleSpan = document.createElement('span');
+			titleSpan.textContent = key + config[i].title;
+			titleSpan.title = config[i].fullPath; // 设置完整路径作为提示
+			selector.appendChild(titleSpan);
+
             this.selection.length = Math.max(this.selection.length, level+1);
 
             // Create inset

@@ -118,6 +118,7 @@ export class ImageViewer {
             imageBoxObj[0]["elements"].push({
                     "version": "-",
                     "title": path.parse(image).base,
+            		"fullPath": image, // 添加完整路径属性
                     "image": webview.asWebviewUri(vscode.Uri.file(image)).toString(),
             });
         });

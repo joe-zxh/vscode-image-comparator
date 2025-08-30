@@ -1,6 +1,12 @@
 # Image Comparator
 Extension to compare images via VSCode.
 
+fork from: https://github.com/l-oneil/vscode-image-comparator
+
+## New Features
+- Support uppercase extension: PNG, JPG, JPEG
+- show full path when hovering on the title
+
 ## Usage
 `cmd + shift + p` -> `Image Comparator: Open Window`, opens a new comparison window.
 
