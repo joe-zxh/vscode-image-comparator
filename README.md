@@ -3,9 +3,10 @@ Extension to compare images via VSCode.
 
 fork from: https://github.com/l-oneil/vscode-image-comparator
 
-## New Features
+## New Features since fork
 - Support uppercase extension: PNG, JPG, JPEG
 - show full path when hovering on the title
+- Switch image position by dragging the title
 
 ## Usage
 `cmd + shift + p` -> `Image Comparator: Open Window`, opens a new comparison window.
