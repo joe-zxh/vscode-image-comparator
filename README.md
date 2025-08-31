@@ -7,6 +7,8 @@ fork from: https://github.com/l-oneil/vscode-image-comparator
 - Support uppercase extension: PNG, JPG, JPEG
 - show full path when hovering on the title
 - show dirname on subtitle
+- show resolution on subtitle
+- a switch in the config setting to hide/show the small window
 - ~~Switch image position by dragging the title~~
 	- remove this feature, since there are many bugs...
 
