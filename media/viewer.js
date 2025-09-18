@@ -317,7 +317,10 @@ var ImageBox = function(parent, config) {
 
     document.addEventListener("keypress", function(event) { self.keyPressHandler(event); });
 
-    // Draggable UI
+    // 设置新的拖拽功能
+    this.setupDragAndDrop();
+
+    // Draggable UI (保留原有的拖拽功能作为备用)
     draggableElements = document.querySelectorAll('[draggable="true"]');
 
     [].forEach.call(draggableElements, function(element) {
@@ -403,8 +406,12 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
             selector.id = config[i].title
         } else {
             // Only Make Draggable if it's an image
-            selector.draggable = "true";
+            selector.draggable = true;
             selector.id = config[i].title + "_" + i;
+            
+            // 添加拖拽相关的数据属性
+            selector.setAttribute('data-index', i.toString());
+            selector.setAttribute('data-level', level.toString());
 
             // Create image
             content = document.createElement('img');
@@ -733,6 +740,341 @@ ImageBox.prototype.mouseMoveHandler = function(event, image, insets) {
                                            + (insets[i].height/2 - yCoord*scale) + "px";
     }
 }
+
+
+ImageBox.prototype.reorderTabs = function(fromIndex, toIndex) {
+    var self = this;
+    
+    // 发送消息给扩展主进程，请求重新排序图像
+    if (vscode && vscode.postMessage) {
+        vscode.postMessage({
+            command: 'reorderImages',
+            fromIndex: fromIndex,
+            toIndex: toIndex
+        });
+    } else {
+        // 如果在开发环境中，直接操作本地数据
+        this.reorderImagesLocal(fromIndex, toIndex);
+    }
+};
+
+ImageBox.prototype.reorderTabsInsert = function(fromIndex, toIndex) {
+    var self = this;
+    
+    // 发送消息给扩展主进程，请求插入式重新排序图像
+    if (vscode && vscode.postMessage) {
+        vscode.postMessage({
+            command: 'reorderImages',
+            fromIndex: fromIndex,
+            toIndex: toIndex
+        });
+    } else {
+        // 如果在开发环境中，直接操作本地数据
+        this.reorderImagesLocalInsert(fromIndex, toIndex);
+    }
+};
+
+ImageBox.prototype.reorderImagesLocalInsert = function(fromIndex, toIndex) {
+    var rootNode = this.tree[0];
+    if (!rootNode || !rootNode.children || fromIndex === toIndex) {
+        return;
+    }
+    
+    // 确保索引在有效范围内
+    if (fromIndex < 0 || fromIndex >= rootNode.children.length || 
+        toIndex < 0 || toIndex > rootNode.children.length) {
+        return;
+    }
+    
+    // 简化的插入式移动逻辑
+    var movedNode = rootNode.children.splice(fromIndex, 1)[0];
+    var movedImageNode = this.imageNodes.splice(fromIndex, 1)[0];
+    
+    // 插入到新位置
+    rootNode.children.splice(toIndex, 0, movedNode);
+    this.imageNodes.splice(toIndex, 0, movedImageNode);
+    
+    // 重新构建UI
+    this.rebuildTabsUI();
+    
+    // 设置当前选择为移动后的位置
+    this.selection[0] = toIndex;
+    
+    // 显示当前选择的内容
+    this.showContent(0, this.selection[0]);
+};
+
+ImageBox.prototype.reorderImagesLocal = function(fromIndex, toIndex) {
+    var rootNode = this.tree[0];
+    if (!rootNode || !rootNode.children || fromIndex === toIndex) {
+        return;
+    }
+    
+    // 确保索引在有效范围内
+    if (fromIndex < 0 || fromIndex >= rootNode.children.length || 
+        toIndex < 0 || toIndex >= rootNode.children.length) {
+        return;
+    }
+    
+    // 移动节点
+    var movedNode = rootNode.children.splice(fromIndex, 1)[0];
+    rootNode.children.splice(toIndex, 0, movedNode);
+    
+    // 同步更新imageNodes数组
+    var movedImageNode = this.imageNodes.splice(fromIndex, 1)[0];
+    this.imageNodes.splice(toIndex, 0, movedImageNode);
+    
+    // 重新构建UI以反映新的顺序
+    this.rebuildTabsUI();
+    
+    // 调整当前选择到移动后的位置
+    if (this.selection[0] === fromIndex) {
+        this.selection[0] = toIndex;
+    } else if (fromIndex < this.selection[0] && toIndex >= this.selection[0]) {
+        this.selection[0]--;
+    } else if (fromIndex > this.selection[0] && toIndex <= this.selection[0]) {
+        this.selection[0]++;
+    }
+    
+    // 显示当前选择的内容
+    this.showContent(0, this.selection[0]);
+};
+
+ImageBox.prototype.rebuildTabsUI = function() {
+    // 清空现有的UI，但保留内容容器
+    var existingContents = [];
+    var rootNode = this.tree[0];
+    if (rootNode && rootNode.children) {
+        rootNode.children.forEach(function(child) {
+            if (child.content) {
+                child.content.style.display = 'none';
+                existingContents.push(child.content);
+            }
+        });
+    }
+    
+    // 清空选择器组
+    var selectorGroups = this.viewerContainer.querySelectorAll('.image-viewer-selector-group');
+    selectorGroups.forEach(function(group) {
+        group.remove();
+    });
+    
+    // 重新构建配置数组，保持当前顺序
+    var config = [];
+    if (rootNode && rootNode.children) {
+        rootNode.children.forEach(function(child) {
+            if (child.config) {
+                config.push(child.config);
+            }
+        });
+    }
+    
+    if (config.length > 0) {
+        // 创建新的选择器组
+        var selectorGroup = document.createElement('div');
+        selectorGroup.className = "image-viewer-selector-group";
+        this.viewerContainer.insertBefore(selectorGroup, this.viewerContainer.firstChild);
+        
+        // 重新创建选择器（标签页）
+        for (var i = 0; i < config.length; i++) {
+            var selector = document.createElement('div');
+            selector.className = "image-viewer-selector image-viewer-selector-primary";
+            selector.draggable = true;
+            selector.id = config[i].title + "_" + i;
+            selector.setAttribute('data-index', i.toString());
+            selector.setAttribute('data-level', '0');  // 修正：使用level 0
+            selector.title = config[i].fullPath;
+            
+            // 重新创建标题容器
+            var titleContainer = document.createElement('div');
+            titleContainer.style.display = 'flex';
+            titleContainer.style.flexDirection = 'column';
+
+            var pathParts = config[i].fullPath.split(/[\\/]/);
+            var folderName = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
+            var fileName = pathParts[pathParts.length - 1];
+
+            var folderSpan = document.createElement('span');
+            folderSpan.textContent = folderName;
+            folderSpan.style.fontSize = '0.8em';
+            folderSpan.style.color = '#888';
+            folderSpan.style.overflow = 'hidden';
+            folderSpan.style.textOverflow = 'ellipsis';
+            folderSpan.style.whiteSpace = 'nowrap';
+
+            var fileSpan = document.createElement('span');
+            var key = '';
+            if (i < 9) key = (i+1) + ": ";
+            else if (i == 9) key = "0: ";
+            else if (i == 10) key = "R: ";
+            fileSpan.textContent = key + fileName;
+
+            var resolutionSpan = document.createElement('span');
+            resolutionSpan.className = 'resolution';
+            resolutionSpan.textContent = config[i].resolution || "加载中...";
+            resolutionSpan.style.fontSize = '0.8em';
+            resolutionSpan.style.color = '#888';
+
+            titleContainer.appendChild(folderSpan);
+            titleContainer.appendChild(fileSpan);
+            titleContainer.appendChild(resolutionSpan);
+            selector.appendChild(titleContainer);
+            
+            selectorGroup.appendChild(selector);
+            
+            // 重新绑定事件
+            var self = this;
+            selector.addEventListener("click", function(idx, event) {
+                self.showContent(0, idx);  // 修正：使用level 0而不是1
+            }.bind(this, i));
+            
+            selector.addEventListener("contextmenu", function(idx, event) {
+                event.preventDefault();
+                self.showContextMenu(event, 0, idx, selector);  // 修正：使用level 0而不是1
+            }.bind(this, i));
+            
+            // 更新树节点中的选择器引用
+            if (rootNode.children[i]) {
+                rootNode.children[i].selector = selector;
+            }
+        }
+        
+        // 重新设置拖拽
+        this.setupDragAndDrop();
+    }
+};
+
+ImageBox.prototype.setupDragAndDrop = function() {
+    var self = this;
+    var draggableElements = this.viewerContainer.querySelectorAll('[draggable="true"]');
+    
+    draggableElements.forEach(function(element) {
+        // 移除之前的事件监听器（如果有的话）
+        element.removeEventListener('dragstart', self.handleDragStart);
+        element.removeEventListener('dragenter', self.handleDragEnter);
+        element.removeEventListener('dragover', self.handleDragOver);
+        element.removeEventListener('dragleave', self.handleDragLeave);
+        element.removeEventListener('drop', self.handleDrop);
+        element.removeEventListener('dragend', self.handleDragEnd);
+        
+        // 添加新的事件监听器
+        element.addEventListener('dragstart', self.handleDragStart.bind(self), false);
+        element.addEventListener('dragenter', self.handleDragEnter.bind(self), false);
+        element.addEventListener('dragover', self.handleDragOver.bind(self), false);
+        element.addEventListener('dragleave', self.handleDragLeave.bind(self), false);
+        element.addEventListener('drop', self.handleDrop.bind(self), false);
+        element.addEventListener('dragend', self.handleDragEnd.bind(self), false);
+    });
+};
+
+ImageBox.prototype.handleDragStart = function(event) {
+    this.dragStartIndex = parseInt(event.target.getAttribute('data-index'));
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/html', event.target.outerHTML);
+    event.target.style.opacity = '0.5';
+};
+
+ImageBox.prototype.handleDragEnter = function(event) {
+    event.preventDefault();
+    event.target.classList.add('drag-over');
+};
+
+ImageBox.prototype.handleDragOver = function(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    
+    // 获取目标元素
+    var target = event.target.closest('.image-viewer-selector');
+    if (!target) return false;
+    
+    // 避免在自己身上拖拽
+    var targetIndex = parseInt(target.getAttribute('data-index'));
+    if (targetIndex === this.dragStartIndex) {
+        return false;
+    }
+    
+    // 移除所有元素的拖拽指示器
+    var allSelectors = this.viewerContainer.querySelectorAll('.image-viewer-selector');
+    allSelectors.forEach(function(el) {
+        el.classList.remove('drag-over', 'drop-before', 'drop-after');
+    });
+    
+    // 计算插入位置
+    var rect = target.getBoundingClientRect();
+    var mouseX = event.clientX;
+    var targetCenter = rect.left + rect.width / 2;
+    
+    // 根据鼠标位置决定插入到前面还是后面
+    if (mouseX < targetCenter) {
+        target.classList.add('drop-before');
+        this.dropPosition = 'before';
+    } else {
+        target.classList.add('drop-after');
+        this.dropPosition = 'after';
+    }
+    
+    return false;
+};
+
+ImageBox.prototype.handleDragLeave = function(event) {
+    // 只有当鼠标真正离开选择器区域时才移除样式
+    var target = event.target.closest('.image-viewer-selector');
+    if (target && !target.contains(event.relatedTarget)) {
+        target.classList.remove('drag-over', 'drop-before', 'drop-after');
+    }
+};
+
+ImageBox.prototype.handleDrop = function(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    var target = event.target.closest('.image-viewer-selector');
+    if (!target) return false;
+    
+    var dropIndex = parseInt(target.getAttribute('data-index'));
+    
+    if (this.dragStartIndex !== undefined && this.dragStartIndex !== dropIndex) {
+        // 计算实际的插入位置
+        var insertIndex = dropIndex;
+        
+        // 如果是拖拽到后面，插入位置+1
+        if (this.dropPosition === 'after') {
+            insertIndex = dropIndex + 1;
+        }
+        
+        // 确保插入位置在有效范围内
+        var maxIndex = this.tree[0].children.length;
+        if (insertIndex > maxIndex) {
+            insertIndex = maxIndex;
+        }
+        
+        // 执行插入式重排序
+        this.reorderTabsInsert(this.dragStartIndex, insertIndex);
+    }
+    
+    // 清理样式
+    var allSelectors = this.viewerContainer.querySelectorAll('.image-viewer-selector');
+    allSelectors.forEach(function(el) {
+        el.classList.remove('drag-over', 'drop-before', 'drop-after');
+    });
+    
+    return false;
+};
+
+ImageBox.prototype.handleDragEnd = function(event) {
+    var self = this;
+    var draggableElements = this.viewerContainer.querySelectorAll('[draggable="true"]');
+    
+    draggableElements.forEach(function(element) {
+        if (element.style) {
+            element.style.opacity = '';
+        }
+        element.classList.remove('drag-over', 'drop-before', 'drop-after');
+    });
+    
+    this.dragStartIndex = undefined;
+    this.dropPosition = undefined;
+};
 
 
 function handleDragStart(event) {

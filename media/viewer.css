@@ -107,6 +107,44 @@ img.inset {
     text-decoration: none;
     display: inline-block;
     cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.image-viewer-selector[draggable="true"] {
+    cursor: move;
+}
+
+.image-viewer-selector.drag-over {
+    background-color: var(--vscode-list-dropBackground);
+    border: 2px dashed var(--vscode-list-focusOutline);
+    transform: scale(1.02);
+}
+
+.image-viewer-selector.drop-before::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: var(--vscode-list-focusOutline);
+    z-index: 1000;
+}
+
+.image-viewer-selector.drop-after::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: var(--vscode-list-focusOutline);
+    z-index: 1000;
+}
+
+.image-viewer-selector:hover {
+    background-color: var(--vscode-list-hoverBackground);
 }
 
 .image-viewer-selector-primary {

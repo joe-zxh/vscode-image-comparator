@@ -43,6 +43,9 @@ export class ImageViewer {
                 case 'removeImage':
                     this.removeImage(message.index);
                     return;
+                case 'reorderImages':
+                    this.reorderImages(message.fromIndex, message.toIndex);
+                    return;
             }
         }, null, this._disposables);
     }
@@ -173,6 +176,25 @@ export class ImageViewer {
     removeImage(index: number) {
         if (index >= 0 && index < this._imageList.length) {
             this._imageList.splice(index, 1);
+            this._update();
+        }
+    }
+
+    reorderImages(fromIndex: number, toIndex: number) {
+        if (fromIndex >= 0 && fromIndex < this._imageList.length && 
+            toIndex >= 0 && toIndex <= this._imageList.length && 
+            fromIndex !== toIndex) {
+            
+            // 插入式移动：先移除元素，再插入到指定位置
+            const movedImage = this._imageList.splice(fromIndex, 1)[0];
+            let actualInsertIndex = toIndex;
+            
+            // 如果移除的位置在插入位置之前，插入位置需要-1
+            if (fromIndex < toIndex) {
+                actualInsertIndex = toIndex - 1;
+            }
+            
+            this._imageList.splice(actualInsertIndex, 0, movedImage);
             this._update();
         }
     }
