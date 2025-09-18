@@ -2,7 +2,7 @@
 	"name": "image-comparator-v2",
 	"displayName": "Image Comparator_v2",
 	"description": "An extension for subjectively evaluating image differences. Modified from: https://github.com/l-oneil/vscode-image-comparator",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"publisher": "joe-zxh",
 	"icon": "icon.png",
 	"author": {

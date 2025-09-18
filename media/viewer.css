@@ -124,3 +124,29 @@ img.inset {
     background-color: var(--vscode-editor-background);
     flex-grow: 0;
 }
+
+/* 右键菜单样式 */
+.context-menu {
+    position: fixed;
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 3px;
+    padding: 4px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 9999;
+    min-width: 120px;
+    font-size: var(--vscode-font-size);
+    font-family: var(--vscode-font-family);
+}
+
+.context-menu-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--vscode-menu-foreground);
+    transition: background-color 0.1s ease;
+}
+
+.context-menu-item:hover {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}

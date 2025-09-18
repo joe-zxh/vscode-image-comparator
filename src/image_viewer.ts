@@ -40,6 +40,9 @@ export class ImageViewer {
                 case 'alert':
                     vscode.window.showErrorMessage(message.text);
                     return;
+                case 'removeImage':
+                    this.removeImage(message.index);
+                    return;
             }
         }, null, this._disposables);
     }
@@ -165,6 +168,13 @@ export class ImageViewer {
     addImage(image_file: string) {
         this._imageList.push(image_file);
         this._update();
+    }
+
+    removeImage(index: number) {
+        if (index >= 0 && index < this._imageList.length) {
+            this._imageList.splice(index, 1);
+            this._update();
+        }
     }
 
     static registerImage(image_file: string){

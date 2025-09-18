@@ -28,6 +28,9 @@
 // import * as vscode from "vscode";
 // const vscode = require("vscode");
 
+// 声明全局变量
+var vscode = (typeof acquireVsCodeApi !== 'undefined') ? acquireVsCodeApi() : undefined;
+
 var imageBoxSettings = {
     zoom: 0.1
 };
@@ -377,6 +380,12 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
             this.showContent(l, idx);
         }.bind(this, level, i));
 
+        // 添加右键菜单事件监听器
+        selector.addEventListener("contextmenu", function(l, idx, event) {
+            event.preventDefault();
+            this.showContextMenu(event, l, idx, selector);
+        }.bind(this, level, i));
+
         // Add to tabs
         selectorGroup.appendChild(selector);
 
@@ -509,6 +518,135 @@ ImageBox.prototype.buildTreeNode = function(config, level, nodeList, parent) {
         parent.appendChild(insetGroup);
     }
 }
+
+
+ImageBox.prototype.showContextMenu = function(event, level, idx, selector) {
+    var self = this;
+    
+    // 创建右键菜单
+    var contextMenu = document.createElement('div');
+    contextMenu.className = 'context-menu';
+    contextMenu.style.position = 'fixed';
+    contextMenu.style.left = event.clientX + 'px';
+    contextMenu.style.top = event.clientY + 'px';
+    contextMenu.style.backgroundColor = 'var(--vscode-menu-background)';
+    contextMenu.style.border = '1px solid var(--vscode-menu-border)';
+    contextMenu.style.borderRadius = '3px';
+    contextMenu.style.padding = '4px 0';
+    contextMenu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    contextMenu.style.zIndex = '9999';
+    contextMenu.style.minWidth = '120px';
+    
+    // 创建关闭选项
+    var closeItem = document.createElement('div');
+    closeItem.className = 'context-menu-item';
+    closeItem.style.padding = '6px 12px';
+    closeItem.style.cursor = 'pointer';
+    closeItem.style.color = 'var(--vscode-menu-foreground)';
+    closeItem.textContent = '关闭标签页';
+    
+    closeItem.addEventListener('mouseover', function() {
+        this.style.backgroundColor = 'var(--vscode-menu-selectionBackground)';
+        this.style.color = 'var(--vscode-menu-selectionForeground)';
+    });
+    
+    closeItem.addEventListener('mouseout', function() {
+        this.style.backgroundColor = 'transparent';
+        this.style.color = 'var(--vscode-menu-foreground)';
+    });
+    
+    closeItem.addEventListener('click', function() {
+        self.closeTab(level, idx);
+        document.body.removeChild(contextMenu);
+    });
+    
+    contextMenu.appendChild(closeItem);
+    document.body.appendChild(contextMenu);
+    
+    // 点击其他地方关闭菜单
+    var closeMenu = function(e) {
+        if (!contextMenu.contains(e.target)) {
+            if (document.body.contains(contextMenu)) {
+                document.body.removeChild(contextMenu);
+            }
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    
+    setTimeout(function() {
+        document.addEventListener('click', closeMenu);
+    }, 10);
+};
+
+ImageBox.prototype.closeTab = function(level, idx) {
+    var self = this;
+    
+    // 发送消息给扩展主进程，请求移除图像
+    if (vscode && vscode.postMessage) {
+        vscode.postMessage({
+            command: 'removeImage',
+            index: idx
+        });
+    } else {
+        // 如果在开发环境中，直接操作本地数据
+        this.removeImageLocal(level, idx);
+    }
+};
+
+ImageBox.prototype.removeImageLocal = function(level, idx) {
+    // 从当前level的children中移除对应的节点
+    var currentNode = this.tree[0]; // 根节点
+    if (currentNode && currentNode.children && currentNode.children[idx]) {
+        // 移除图像节点
+        currentNode.children.splice(idx, 1);
+        
+        // 从imageNodes数组中移除对应的节点
+        for (var i = this.imageNodes.length - 1; i >= 0; i--) {
+            if (this.imageNodes[i].config && this.imageNodes[i].config.title === currentNode.children[idx] ? currentNode.children[idx].config.title : '') {
+                this.imageNodes.splice(i, 1);
+                break;
+            }
+        }
+        
+        // 调整当前选择
+        if (this.selection[level] >= currentNode.children.length) {
+            this.selection[level] = Math.max(0, currentNode.children.length - 1);
+        }
+        
+        // 如果还有图像，显示调整后的选择
+        if (currentNode.children.length > 0) {
+            this.showContent(level, this.selection[level]);
+        } else {
+            // 如果没有图像了，清空显示区域
+            this.viewerContainer.innerHTML = '<div class="no-images-message" style="padding: 20px; text-align: center; color: var(--vscode-descriptionForeground);">没有图像可显示</div>';
+        }
+    }
+};
+
+ImageBox.prototype.rebuildUI = function() {
+    // 清空现有的UI
+    this.viewerContainer.innerHTML = '';
+    
+    // 重新构建树结构 - 需要重新构造config
+    var config = [];
+    this.imageNodes.forEach(function(node, index) {
+        if (node.config) {
+            config.push(node.config);
+        }
+    });
+    
+    if (config.length > 0) {
+        // 重新初始化
+        this.tree = [];
+        this.imageNodes = [];
+        this.buildTreeNode([{
+            elements: config,
+            title: "Image Comparator"
+        }], 0, this.tree, this.viewerContainer);
+        
+        this.loadImageResolutions();
+    }
+};
 
 
 ImageBox.prototype.showContent = function(level, idx) {
