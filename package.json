@@ -28,8 +28,17 @@
 			{
 				"command": "image-comparator.addImage",
 				"title": "Image Comparator: Add Image"
+			},
+			{
+				"command": "extension.focusFolder",
+				"title": "Focus Target Folder"
 			}
 		],
+		"keybindings": [{
+			"command": "extension.focusFolder",
+			"key": "ctrl+shift+M",
+			"when": "editorTextFocus"
+		}],
 		"menus": {
 			"explorer/context": [
 				{
