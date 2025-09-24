@@ -36,7 +36,7 @@
 		],
 		"keybindings": [{
 			"command": "extension.focusFolder",
-			"key": "ctrl+shift+M",
+			"key": "ctrl+shift+m",
 			"when": "editorTextFocus"
 		}],
 		"menus": {

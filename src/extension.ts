@@ -45,8 +45,15 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	let disposable = vscode.commands.registerCommand('extension.focusFolder', async () => {
-        // 获取目标路径（示例路径，实际可改为动态输入）
-        const targetPath = "/Volumes/gzy/ws/projs/vscode_ext/vscode-image-comparator/color_dir/fawef";
+        // 获取用户输入的路径
+        const targetPath = await vscode.window.showInputBox({
+            prompt: '请输入要定位和展开的文件夹路径',
+            placeHolder: '/path/to/your/folder'
+        });
+        
+        if (!targetPath) {
+            return; // 用户取消输入
+        }
         
         // 1. 折叠所有文件夹
         await vscode.commands.executeCommand('workbench.files.action.collapseExplorerFolders');
@@ -55,8 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
         const uri = vscode.Uri.file(targetPath);
         await vscode.commands.executeCommand('revealInExplorer', uri);
         
-        // 3. 滚动到视图顶部（可选）
-        await vscode.commands.executeCommand('list.focusTop');
+        // 3. 展开目标文件夹
+        await vscode.commands.executeCommand('list.expand');
+        
     });
     context.subscriptions.push(disposable);
 }
