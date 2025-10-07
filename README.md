@@ -9,8 +9,9 @@ fork from: https://github.com/l-oneil/vscode-image-comparator
 - show dirname on subtitle
 - show resolution on subtitle
 - a switch in the config setting to hide/show the small window
-- ~~Switch image position by dragging the title~~
-	- remove this feature, since there are many bugs...
+- Switch image position by dragging the title
+- right click to close tab
+- expand target directory: focus target folder
 
 ## Usage
 `cmd + shift + p` -> `Image Comparator: Open Window`, opens a new comparison window.
